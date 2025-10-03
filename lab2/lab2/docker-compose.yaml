@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  postgres-service:
+    image: postgres:15
+    container_name: postgres-service
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend-service:
+    build: ./backend
+    container_name: backend-service
+    command: gunicorn lab1.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - postgres-service
+    environment:
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=postgres-service
+      - DB_PORT=${POSTGRES_PORT}
+
+  nginx-service:
+    build: ./nginx
+    container_name: nginx-service
+    ports:
+      - "80:80"
+    depends_on:
+      - backend-service
+    volumes:
+      - ./backend/lab1/static:/static
+
+volumes:
+  postgres_data:
